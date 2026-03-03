@@ -3,20 +3,18 @@ const Joi = require('joi');
 
 const stellarService = new StellarService();
 
-const campaignSchema = Joi.object({
-    title: Joi.string().required().min(3).max(100),
-    description: Joi.string().required().min(10).max(1000),
-    targetAmount: Joi.number().required().min(1),
-    category: Joi.string().valid('medical', 'food', 'shelter', 'water', 'general').required(),
-    location: Joi.string().required().min(3).max(100),
-    urgency: Joi.string().valid('critical', 'high', 'medium', 'low').required()
+const distributionSchema = Joi.object({
+    campaignId: Joi.string().required().pattern(/^AID_\d+_[A-F0-9]{8}$/),
+    recipientAddress: Joi.string().required().pattern(/^G[A-Z0-9]{55}$/),
+    amount: Joi.number().required().min(0.1),
+    memo: Joi.string().optional().max(200)
 });
 
-class CampaignController {
-    async createCampaign(req, res) {
+class DistributionController {
+    async createDistribution(req, res) {
         try {
             // Validate input
-            const { error, value } = campaignSchema.validate(req.body);
+            const { error, value } = distributionSchema.validate(req.body);
             if (error) {
                 return res.status(400).json({
                     error: 'Validation failed',
@@ -24,112 +22,79 @@ class CampaignController {
                 });
             }
 
-            // Create campaign
-            const campaign = await stellarService.createAidCampaign(value);
+            // Create distribution
+            const distribution = await stellarService.distributeAid(
+                value.campaignId,
+                value.recipientAddress,
+                value.amount,
+                value.memo
+            );
 
             res.status(201).json({
                 success: true,
-                message: 'Campaign created successfully',
-                data: campaign
+                message: 'Aid distributed successfully',
+                data: distribution
             });
         } catch (error) {
-            console.error('Create campaign error:', error);
+            console.error('Create distribution error:', error);
             res.status(500).json({
-                error: 'Failed to create campaign',
+                error: 'Failed to distribute aid',
                 message: error.message
             });
         }
     }
 
-    async getCampaignStatus(req, res) {
+    async getDistributions(req, res) {
         try {
-            const { campaignId } = req.params;
+            const { campaignId } = req.query;
 
-            if (!campaignId || !campaignId.match(/^AID_\d+_[A-F0-9]{8}$/)) {
-                return res.status(400).json({
-                    error: 'Invalid campaign ID format'
+            if (campaignId) {
+                const campaignStatus = await stellarService.getCampaignStatus(campaignId);
+                return res.json({
+                    success: true,
+                    data: campaignStatus.distributions
                 });
             }
 
-            const status = await stellarService.getCampaignStatus(campaignId);
-
+            // This would typically query a database for all distributions
             res.json({
                 success: true,
-                data: status
-            });
-        } catch (error) {
-            console.error('Get campaign status error:', error);
-            
-            if (error.message.includes('Campaign not found')) {
-                return res.status(404).json({
-                    error: 'Campaign not found',
-                    message: error.message
-                });
-            }
-
-            res.status(500).json({
-                error: 'Failed to get campaign status',
-                message: error.message
-            });
-        }
-    }
-
-    async listCampaigns(req, res) {
-        try {
-            // This would typically query a database
-            // For now, return a placeholder response
-            res.json({
-                success: true,
-                message: 'Campaign listing not implemented yet - would require database integration',
+                message: 'Distribution listing not implemented yet - would require database integration',
                 data: []
             });
         } catch (error) {
-            console.error('List campaigns error:', error);
+            console.error('Get distributions error:', error);
             res.status(500).json({
-                error: 'Failed to list campaigns',
+                error: 'Failed to get distributions',
                 message: error.message
             });
         }
     }
 
-    async updateCampaign(req, res) {
+    async getDistribution(req, res) {
         try {
-            const { campaignId } = req.params;
-            const updates = req.body;
+            const { distributionId } = req.params;
 
-            // This would typically update campaign in database
+            if (!distributionId || !distributionId.match(/^DIST_\d+_[A-F0-9]{6}$/)) {
+                return res.status(400).json({
+                    error: 'Invalid distribution ID format'
+                });
+            }
+
+            const verification = await stellarService.verifyAidDistribution(distributionId);
+
             res.json({
                 success: true,
-                message: 'Campaign update not implemented yet - would require database integration',
-                data: { campaignId, updates }
+                data: verification
             });
         } catch (error) {
-            console.error('Update campaign error:', error);
+            console.error('Get distribution error:', error);
             res.status(500).json({
-                error: 'Failed to update campaign',
-                message: error.message
-            });
-        }
-    }
-
-    async deleteCampaign(req, res) {
-        try {
-            const { campaignId } = req.params;
-
-            // This would typically delete campaign from database
-            res.json({
-                success: true,
-                message: 'Campaign deletion not implemented yet - would require database integration',
-                data: { campaignId }
-            });
-        } catch (error) {
-            console.error('Delete campaign error:', error);
-            res.status(500).json({
-                error: 'Failed to delete campaign',
+                error: 'Failed to get distribution',
                 message: error.message
             });
         }
     }
 }
 
-module.exports = new CampaignController();
+module.exports = new DistributionController();

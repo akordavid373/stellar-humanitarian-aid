@@ -3,133 +3,87 @@ const Joi = require('joi');
 
 const stellarService = new StellarService();
 
-const campaignSchema = Joi.object({
-    title: Joi.string().required().min(3).max(100),
-    description: Joi.string().required().min(10).max(1000),
-    targetAmount: Joi.number().required().min(1),
-    category: Joi.string().valid('medical', 'food', 'shelter', 'water', 'general').required(),
-    location: Joi.string().required().min(3).max(100),
-    urgency: Joi.string().valid('critical', 'high', 'medium', 'low').required()
+const verificationSchema = Joi.object({
+    distributionId: Joi.string().required().pattern(/^DIST_\d+_[A-F0-9]{6}$/)
 });
 
-class CampaignController {
-    async createCampaign(req, res) {
+class VerificationController {
+    async verifyDistribution(req, res) {
         try {
-            // Validate input
-            const { error, value } = campaignSchema.validate(req.body);
-            if (error) {
+            const { distributionId } = req.params;
+
+            if (!distributionId || !distributionId.match(/^DIST_\d+_[A-F0-9]{6}$/)) {
                 return res.status(400).json({
-                    error: 'Validation failed',
-                    details: error.details.map(detail => detail.message)
+                    error: 'Invalid distribution ID format'
                 });
             }
 
-            // Create campaign
-            const campaign = await stellarService.createAidCampaign(value);
+            const verification = await stellarService.verifyAidDistribution(distributionId);
 
-            res.status(201).json({
+            res.json({
                 success: true,
-                message: 'Campaign created successfully',
-                data: campaign
+                message: 'Distribution verification completed',
+                data: verification
             });
         } catch (error) {
-            console.error('Create campaign error:', error);
+            console.error('Verify distribution error:', error);
             res.status(500).json({
-                error: 'Failed to create campaign',
+                error: 'Failed to verify distribution',
                 message: error.message
             });
         }
     }
 
-    async getCampaignStatus(req, res) {
+    async getTransactionHistory(req, res) {
         try {
-            const { campaignId } = req.params;
+            const { accountId } = req.params;
+            const { limit = 10 } = req.query;
 
-            if (!campaignId || !campaignId.match(/^AID_\d+_[A-F0-9]{8}$/)) {
+            if (!accountId || !accountId.match(/^G[A-Z0-9]{55}$/)) {
                 return res.status(400).json({
-                    error: 'Invalid campaign ID format'
+                    error: 'Invalid Stellar account address format'
                 });
             }
 
-            const status = await stellarService.getCampaignStatus(campaignId);
+            const history = await stellarService.getTransactionHistory(accountId, parseInt(limit));
 
             res.json({
                 success: true,
-                data: status
+                data: history
             });
         } catch (error) {
-            console.error('Get campaign status error:', error);
-            
-            if (error.message.includes('Campaign not found')) {
-                return res.status(404).json({
-                    error: 'Campaign not found',
-                    message: error.message
+            console.error('Get transaction history error:', error);
+            res.status(500).json({
+                error: 'Failed to get transaction history',
+                message: error.message
+            });
+        }
+    }
+
+    async verifyTransaction(req, res) {
+        try {
+            const { transactionHash } = req.params;
+
+            if (!transactionHash || !transactionHash.match(/^[a-f0-9]{64}$/)) {
+                return res.status(400).json({
+                    error: 'Invalid transaction hash format'
                 });
             }
 
-            res.status(500).json({
-                error: 'Failed to get campaign status',
-                message: error.message
-            });
-        }
-    }
-
-    async listCampaigns(req, res) {
-        try {
-            // This would typically query a database
-            // For now, return a placeholder response
+            // This would typically verify transaction on Stellar network
             res.json({
                 success: true,
-                message: 'Campaign listing not implemented yet - would require database integration',
-                data: []
+                message: 'Transaction verification not implemented yet',
+                data: { transactionHash }
             });
         } catch (error) {
-            console.error('List campaigns error:', error);
+            console.error('Verify transaction error:', error);
             res.status(500).json({
-                error: 'Failed to list campaigns',
-                message: error.message
-            });
-        }
-    }
-
-    async updateCampaign(req, res) {
-        try {
-            const { campaignId } = req.params;
-            const updates = req.body;
-
-            // This would typically update campaign in database
-            res.json({
-                success: true,
-                message: 'Campaign update not implemented yet - would require database integration',
-                data: { campaignId, updates }
-            });
-        } catch (error) {
-            console.error('Update campaign error:', error);
-            res.status(500).json({
-                error: 'Failed to update campaign',
-                message: error.message
-            });
-        }
-    }
-
-    async deleteCampaign(req, res) {
-        try {
-            const { campaignId } = req.params;
-
-            // This would typically delete campaign from database
-            res.json({
-                success: true,
-                message: 'Campaign deletion not implemented yet - would require database integration',
-                data: { campaignId }
-            });
-        } catch (error) {
-            console.error('Delete campaign error:', error);
-            res.status(500).json({
-                error: 'Failed to delete campaign',
+                error: 'Failed to verify transaction',
                 message: error.message
             });
         }
     }
 }
 
-module.exports = new CampaignController();
+module.exports = new VerificationController();

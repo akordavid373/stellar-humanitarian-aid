@@ -3,20 +3,18 @@ const Joi = require('joi');
 
 const stellarService = new StellarService();
 
-const campaignSchema = Joi.object({
-    title: Joi.string().required().min(3).max(100),
-    description: Joi.string().required().min(10).max(1000),
-    targetAmount: Joi.number().required().min(1),
-    category: Joi.string().valid('medical', 'food', 'shelter', 'water', 'general').required(),
+const beneficiarySchema = Joi.object({
+    name: Joi.string().required().min(2).max(100),
+    contact: Joi.string().required().min(5).max(200),
     location: Joi.string().required().min(3).max(100),
-    urgency: Joi.string().valid('critical', 'high', 'medium', 'low').required()
+    needs: Joi.array().items(Joi.string()).optional()
 });
 
-class CampaignController {
-    async createCampaign(req, res) {
+class BeneficiaryController {
+    async createBeneficiary(req, res) {
         try {
             // Validate input
-            const { error, value } = campaignSchema.validate(req.body);
+            const { error, value } = beneficiarySchema.validate(req.body);
             if (error) {
                 return res.status(400).json({
                     error: 'Validation failed',
@@ -24,112 +22,78 @@ class CampaignController {
                 });
             }
 
-            // Create campaign
-            const campaign = await stellarService.createAidCampaign(value);
+            // Create beneficiary wallet
+            const beneficiary = await stellarService.createBeneficiaryWallet(value);
 
             res.status(201).json({
                 success: true,
-                message: 'Campaign created successfully',
-                data: campaign
+                message: 'Beneficiary wallet created successfully',
+                data: beneficiary
             });
         } catch (error) {
-            console.error('Create campaign error:', error);
+            console.error('Create beneficiary error:', error);
             res.status(500).json({
-                error: 'Failed to create campaign',
+                error: 'Failed to create beneficiary wallet',
                 message: error.message
             });
         }
     }
 
-    async getCampaignStatus(req, res) {
-        try {
-            const { campaignId } = req.params;
-
-            if (!campaignId || !campaignId.match(/^AID_\d+_[A-F0-9]{8}$/)) {
-                return res.status(400).json({
-                    error: 'Invalid campaign ID format'
-                });
-            }
-
-            const status = await stellarService.getCampaignStatus(campaignId);
-
-            res.json({
-                success: true,
-                data: status
-            });
-        } catch (error) {
-            console.error('Get campaign status error:', error);
-            
-            if (error.message.includes('Campaign not found')) {
-                return res.status(404).json({
-                    error: 'Campaign not found',
-                    message: error.message
-                });
-            }
-
-            res.status(500).json({
-                error: 'Failed to get campaign status',
-                message: error.message
-            });
-        }
-    }
-
-    async listCampaigns(req, res) {
+    async getBeneficiaries(req, res) {
         try {
             // This would typically query a database
-            // For now, return a placeholder response
             res.json({
                 success: true,
-                message: 'Campaign listing not implemented yet - would require database integration',
+                message: 'Beneficiary listing not implemented yet - would require database integration',
                 data: []
             });
         } catch (error) {
-            console.error('List campaigns error:', error);
+            console.error('Get beneficiaries error:', error);
             res.status(500).json({
-                error: 'Failed to list campaigns',
+                error: 'Failed to get beneficiaries',
                 message: error.message
             });
         }
     }
 
-    async updateCampaign(req, res) {
+    async getBeneficiary(req, res) {
         try {
-            const { campaignId } = req.params;
+            const { beneficiaryId } = req.params;
+
+            // This would typically query database by beneficiaryId
+            res.json({
+                success: true,
+                message: 'Beneficiary details not implemented yet - would require database integration',
+                data: { beneficiaryId }
+            });
+        } catch (error) {
+            console.error('Get beneficiary error:', error);
+            res.status(500).json({
+                error: 'Failed to get beneficiary',
+                message: error.message
+            });
+        }
+    }
+
+    async updateBeneficiary(req, res) {
+        try {
+            const { beneficiaryId } = req.params;
             const updates = req.body;
 
-            // This would typically update campaign in database
+            // This would typically update beneficiary in database
             res.json({
                 success: true,
-                message: 'Campaign update not implemented yet - would require database integration',
-                data: { campaignId, updates }
+                message: 'Beneficiary update not implemented yet - would require database integration',
+                data: { beneficiaryId, updates }
             });
         } catch (error) {
-            console.error('Update campaign error:', error);
+            console.error('Update beneficiary error:', error);
             res.status(500).json({
-                error: 'Failed to update campaign',
-                message: error.message
-            });
-        }
-    }
-
-    async deleteCampaign(req, res) {
-        try {
-            const { campaignId } = req.params;
-
-            // This would typically delete campaign from database
-            res.json({
-                success: true,
-                message: 'Campaign deletion not implemented yet - would require database integration',
-                data: { campaignId }
-            });
-        } catch (error) {
-            console.error('Delete campaign error:', error);
-            res.status(500).json({
-                error: 'Failed to delete campaign',
+                error: 'Failed to update beneficiary',
                 message: error.message
             });
         }
     }
 }
 
-module.exports = new CampaignController();
+module.exports = new BeneficiaryController();
